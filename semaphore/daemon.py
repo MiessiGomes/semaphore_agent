@@ -40,6 +40,18 @@ class SemaphoreDaemon:
         from semaphore.adapters.process import ProcessScanner
 
         adapters = []
+        if self.config.adapters.get("cursor", True):
+            from semaphore.adapters.cursor_cli import CursorCliAdapter
+
+            adapters.append(
+                CursorCliAdapter(
+                    self.hub,
+                    interval=1.0,
+                    active_window=float(getattr(self.config, "cursor_cli_active_window", 12.0)),
+                    finalize_grace=float(getattr(self.config, "cursor_cli_finalize_grace", 4.0)),
+                    stop_event=self._stop_event,
+                )
+            )
         if self.config.adapters.get("claude", True):
             adapters.append(
                 ClaudeAdapter(self.hub, interval=self.config.claude_poll_interval, stop_event=self._stop_event)

@@ -184,7 +184,8 @@ semaphore config --layout compact --anchor top-left
 
 | Agente | Método |
 |--------|--------|
-| **Cursor** | Hooks em `~/.cursor/hooks.json` via `install-hooks` |
+| **Cursor (IDE)** | Hooks em `~/.cursor/hooks.json` via `install-hooks` |
+| **Cursor CLI** (`agent` no terminal / VS Code) | Adapter `cursor-cli` (processo + `~/.cursor/chats/`) |
 | **Claude Code** | Poll `claude agents --json` |
 | **Codex** | Atividade em `~/.codex/sessions/` |
 | **Gemini / outros** | Scanner de processos (heurístico, TTL curto) |
@@ -208,6 +209,23 @@ semaphore config --layout compact --anchor top-left
 Verifique a versão instalada: `semaphore status` → `Hooks Cursor: v4 (ok)`.
 
 Heurísticos (`proc:*`) não sobrescrevem fontes confirmadas como Cursor.
+
+### Cursor CLI (`agent` no terminal)
+
+Os hooks do IDE **não cobrem** o comando `agent` no terminal integrado do VS Code/Cursor.  
+O adapter **`cursor-cli`** detecta atividade por arquivos (não por processo — agents em background ficam abertos):
+
+- alterações em `~/.cursor/chats/` ou `agent-transcripts/` → **vermelho**
+- pausa entre etapas (>12s sem escrita) → **amarelo** breve
+- fim da sessão → **verde** + notificação
+- `cursor-askpass` → **vermelho piscando**
+
+Requer `adapters.cursor = true` (padrão). Após atualizar:
+
+```bash
+uv pip install -e .
+systemctl --user restart semaphore-agent-daemon.service
+```
 
 ## Configuração
 
