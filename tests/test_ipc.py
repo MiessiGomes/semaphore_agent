@@ -1,11 +1,7 @@
 """IPC socket tests."""
 
-import json
-import threading
 import time
-from pathlib import Path
 
-from semaphore.config import socket_path
 from semaphore.ipc import fetch_status, send_notification, start_socket_server
 from semaphore.state import AgentState, StateHub
 

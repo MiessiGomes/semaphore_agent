@@ -5,8 +5,9 @@ from __future__ import annotations
 import json
 import socket
 import threading
+from collections.abc import Callable
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from semaphore.state import StateHub
@@ -76,7 +77,7 @@ def dismiss(path: Path) -> bool:
 
 def start_socket_server(
     path: Path,
-    hub: "StateHub",
+    hub: StateHub,
     on_error: Callable[[Exception], None] | None = None,
 ) -> threading.Thread:
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -109,7 +110,7 @@ def start_socket_server(
         while True:
             try:
                 conn, _ = server.accept()
-            except (TimeoutError, socket.timeout):
+            except TimeoutError:
                 continue
             except OSError:
                 break

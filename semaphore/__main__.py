@@ -11,7 +11,6 @@ from semaphore import __version__
 from semaphore.config import CONFIG_FILE, Config, socket_path
 from semaphore.daemon import dismiss, ensure_daemon, get_live_status, notify
 from semaphore.hooks_version import HOOKS_VERSION, hooks_outdated, installed_version
-from semaphore.persistence import read_status_json
 from semaphore.state import STATE_NAMES
 
 

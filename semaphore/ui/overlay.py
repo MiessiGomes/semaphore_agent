@@ -11,7 +11,6 @@ if TYPE_CHECKING:
 
 from semaphore.state import AgentState, AggregatedStatus
 
-
 CSS = """
 window {
     background: transparent;
@@ -297,7 +296,12 @@ def _begin_window_move(window, gesture, x: float, y: float) -> None:
 
 def _apply_stay_on_top(window, *, grab_focus: bool = False, reapply_hints: bool = False) -> None:
     """Best-effort always-on-top; prefer X11 EWMH over present() on GNOME."""
-    from semaphore.ui.x11_hints import apply_sticky_above, is_x11_window, raise_window, wmctrl_sticky
+    from semaphore.ui.x11_hints import (
+        apply_sticky_above,
+        is_x11_window,
+        raise_window,
+        wmctrl_sticky,
+    )
 
     title = None
     try:
@@ -408,8 +412,9 @@ def _apply_anchors(window, config: Config) -> None:
 
 
 def run_overlay(config: Config, hub: StateHub, stop_event: threading.Event) -> SemaphoreOverlay:
-    from semaphore.ui.platform import describe_overlay_mode, is_gnome_session, layer_shell_available
     import sys
+
+    from semaphore.ui.platform import describe_overlay_mode, is_gnome_session, layer_shell_available
 
     if layer_shell_available():
         return _run_layer_shell_overlay(config, hub, stop_event)
@@ -437,7 +442,8 @@ def _run_layer_shell_overlay(
     gi.require_version("Gtk", "4.0")
     gi.require_version("Gtk4LayerShell", "1.0")
 
-    from gi.repository import GLib, Gtk, Gtk4LayerShell as LayerShell
+    from gi.repository import Gtk
+    from gi.repository import Gtk4LayerShell as LayerShell
 
     overlay_ref: list[SemaphoreOverlay | None] = [None]
 

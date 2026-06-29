@@ -12,7 +12,7 @@ from pathlib import Path
 
 from semaphore.alerts import AlertManager
 from semaphore.config import Config, socket_path
-from semaphore.ipc import dismiss, fetch_status, start_socket_server
+from semaphore.ipc import fetch_status, start_socket_server
 from semaphore.persistence import persist_status
 from semaphore.state import AggregatedStatus, StateHub
 
@@ -154,10 +154,9 @@ def daemon_running() -> bool:
     return socket_path().exists()
 
 
-def ensure_daemon(config: Config | None = None) -> bool:
+def ensure_daemon(_config: Config | None = None) -> bool:
     if daemon_running():
         return True
-    cfg = config or Config.load()
     env = os.environ.copy()
     proc = subprocess.Popen(
         [sys.executable, "-m", "semaphore", "daemon"],
