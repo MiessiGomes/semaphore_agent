@@ -1,0 +1,15 @@
+[Unit]
+Description=Semaphore Agent UI (overlay + tray)
+After=semaphore-agent-daemon.service graphical-session.target
+Requires=semaphore-agent-daemon.service
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+EnvironmentFile=-%h/.config/semaphore_agent/systemd.env
+ExecStart=@PYTHON@ -m semaphore ui
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=graphical-session.target

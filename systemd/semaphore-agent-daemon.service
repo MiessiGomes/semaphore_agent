@@ -1,0 +1,14 @@
+[Unit]
+Description=Semaphore Agent daemon (IPC + adapters)
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+EnvironmentFile=-%h/.config/semaphore_agent/systemd.env
+ExecStart=@PYTHON@ -m semaphore daemon
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=graphical-session.target

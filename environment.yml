@@ -1,0 +1,10 @@
+name: semaphore-agent
+channels:
+  - conda-forge
+dependencies:
+  - python>=3.11
+  - pygobject
+  - gtk4
+  - pip
+  - pip:
+    - -e .
