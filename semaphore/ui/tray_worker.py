@@ -85,7 +85,7 @@ def main(parent_pid: int | None = None) -> int:
     from semaphore.config import socket_path
     from semaphore.daemon import get_live_status
     from semaphore.ipc import dismiss
-    from semaphore.ui.tray import STATE_EMOJI, _emoji_for
+    from semaphore.ui.tray import _emoji_for
 
     indicator = AppIndicator.Indicator.new(
         "semaphore-agent",

@@ -12,7 +12,7 @@ from pathlib import Path
 
 from semaphore.alerts import AlertManager
 from semaphore.config import Config, socket_path
-from semaphore.ipc import dismiss, fetch_status, start_socket_server
+from semaphore.ipc import fetch_status, start_socket_server
 from semaphore.persistence import persist_status
 from semaphore.state import AggregatedStatus, StateHub
 
@@ -40,6 +40,18 @@ class SemaphoreDaemon:
         from semaphore.adapters.process import ProcessScanner
 
         adapters = []
+        if self.config.adapters.get("cursor", True):
+            from semaphore.adapters.cursor_cli import CursorCliAdapter
+
+            adapters.append(
+                CursorCliAdapter(
+                    self.hub,
+                    interval=1.0,
+                    active_window=float(getattr(self.config, "cursor_cli_active_window", 12.0)),
+                    finalize_grace=float(getattr(self.config, "cursor_cli_finalize_grace", 4.0)),
+                    stop_event=self._stop_event,
+                )
+            )
         if self.config.adapters.get("claude", True):
             adapters.append(
                 ClaudeAdapter(self.hub, interval=self.config.claude_poll_interval, stop_event=self._stop_event)
@@ -142,10 +154,9 @@ def daemon_running() -> bool:
     return socket_path().exists()
 
 
-def ensure_daemon(config: Config | None = None) -> bool:
+def ensure_daemon(_config: Config | None = None) -> bool:
     if daemon_running():
         return True
-    cfg = config or Config.load()
     env = os.environ.copy()
     proc = subprocess.Popen(
         [sys.executable, "-m", "semaphore", "daemon"],

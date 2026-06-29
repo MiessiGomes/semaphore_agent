@@ -6,7 +6,6 @@ import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
 
-
 CONFIG_DIR = Path.home() / ".config" / "semaphore_agent"
 CONFIG_FILE = CONFIG_DIR / "config.toml"
 SOCKET_NAME = "semaphore_agent/status.sock"
