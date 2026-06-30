@@ -42,19 +42,31 @@ detect_python() {
 }
 
 write_env_file() {
+  # Só variáveis estáveis. As voláteis da sessão gráfica (DISPLAY, WAYLAND_DISPLAY,
+  # XAUTHORITY, DBUS_SESSION_BUS_ADDRESS, XDG_RUNTIME_DIR) NÃO são fixadas aqui:
+  # o serviço as herda do gerenciador systemd --user (import_session_env). Fixá-las
+  # quebra após relogin, pois o XAUTHORITY do Mutter/Xwayland muda a cada sessão.
   mkdir -p "$(dirname "$ENV_FILE")"
   {
     echo "# Gerado por scripts/install-systemd.sh — $(date -Iseconds)"
     echo "GDK_BACKEND=x11"
     echo "GI_TYPELIB_PATH=/usr/lib/x86_64-linux-gnu/girepository-1.0"
     echo "PATH=$(dirname "$PYTHON_BIN"):$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin"
-    [[ -n "${XDG_RUNTIME_DIR:-}" ]] && echo "XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR"
-    [[ -n "${WAYLAND_DISPLAY:-}" ]] && echo "WAYLAND_DISPLAY=$WAYLAND_DISPLAY"
-    [[ -n "${DISPLAY:-}" ]] && echo "DISPLAY=$DISPLAY"
-    [[ -n "${DBUS_SESSION_BUS_ADDRESS:-}" ]] && echo "DBUS_SESSION_BUS_ADDRESS=$DBUS_SESSION_BUS_ADDRESS"
-    [[ -n "${XAUTHORITY:-}" ]] && echo "XAUTHORITY=$XAUTHORITY"
   } >"$ENV_FILE"
   echo "Env: $ENV_FILE"
+}
+
+import_session_env() {
+  # Importa as variáveis voláteis da sessão para o gerenciador systemd --user,
+  # de modo que os serviços as herdem com os valores atuais (e corretos) do login.
+  local vars=()
+  for v in DISPLAY WAYLAND_DISPLAY XAUTHORITY DBUS_SESSION_BUS_ADDRESS XDG_RUNTIME_DIR; do
+    [[ -n "${!v:-}" ]] && vars+=("$v")
+  done
+  if [[ ${#vars[@]} -gt 0 ]]; then
+    systemctl --user import-environment "${vars[@]}"
+    echo "Importadas para systemd --user: ${vars[*]}"
+  fi
 }
 
 install_unit() {
@@ -65,6 +77,7 @@ install_unit() {
 
 PYTHON_BIN="$(detect_python)"
 write_env_file
+import_session_env
 mkdir -p "$USER_UNIT_DIR"
 
 case "$MODE" in

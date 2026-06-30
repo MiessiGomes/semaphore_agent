@@ -5,9 +5,25 @@ from __future__ import annotations
 import ctypes
 import ctypes.util
 import logging
+from pathlib import Path
 from typing import Any
 
 log = logging.getLogger(__name__)
+
+SHOW_OVERLAY_REQUEST = Path.home() / ".local/share/semaphore_agent/show_overlay.request"
+
+
+def request_show_overlay() -> None:
+    """Signal the overlay UI process to show its window (tray runs in another process)."""
+    SHOW_OVERLAY_REQUEST.parent.mkdir(parents=True, exist_ok=True)
+    SHOW_OVERLAY_REQUEST.touch()
+
+
+def consume_show_overlay_request() -> bool:
+    if SHOW_OVERLAY_REQUEST.exists():
+        SHOW_OVERLAY_REQUEST.unlink(missing_ok=True)
+        return True
+    return False
 
 
 def _x11() -> Any | None:
@@ -219,3 +235,42 @@ def wmctrl_sticky(title: str = "Semaphore") -> bool:
         return r.returncode == 0
     except (OSError, subprocess.SubprocessError):
         return False
+
+
+def show_overlay_window(title: str = "Semaphore") -> bool:
+    """Show and raise the overlay window (e.g. after GTK set_visible(False) or wmctrl hidden)."""
+    import shutil
+    import subprocess
+
+    request_show_overlay()
+
+    wmctrl = shutil.which("wmctrl")
+    if not wmctrl:
+        return False
+    try:
+        out = subprocess.run(
+            [wmctrl, "-l"],
+            capture_output=True,
+            text=True,
+            timeout=3,
+            check=False,
+        )
+        for line in out.stdout.splitlines():
+            if title in line:
+                win_id = line.split()[0]
+                subprocess.run(
+                    [wmctrl, "-i", "-r", win_id, "-b", "remove,hidden"],
+                    capture_output=True,
+                    timeout=3,
+                    check=False,
+                )
+                subprocess.run(
+                    [wmctrl, "-ia", win_id],
+                    capture_output=True,
+                    timeout=3,
+                    check=False,
+                )
+                return True
+    except (OSError, subprocess.SubprocessError):
+        pass
+    return True

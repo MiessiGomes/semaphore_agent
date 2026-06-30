@@ -9,7 +9,8 @@ import time
 
 from semaphore import __version__
 from semaphore.config import CONFIG_FILE, Config, socket_path
-from semaphore.daemon import dismiss, ensure_daemon, get_live_status, notify
+from semaphore.daemon import ensure_daemon, get_live_status, notify
+from semaphore.ipc import dismiss
 from semaphore.hooks_version import HOOKS_VERSION, hooks_outdated, installed_version
 from semaphore.state import STATE_NAMES
 
@@ -79,25 +80,10 @@ def cmd_dismiss(_args: argparse.Namespace) -> int:
 
 
 def cmd_raise(_args: argparse.Namespace) -> int:
-    import shutil
-    import subprocess
+    from semaphore.ui.x11_hints import show_overlay_window
 
-    if shutil.which("wmctrl"):
-        try:
-            out = subprocess.run(
-                ["wmctrl", "-l"],
-                capture_output=True,
-                text=True,
-                timeout=3,
-                check=False,
-            )
-            for line in out.stdout.splitlines():
-                if "Semaphore" in line:
-                    win_id = line.split()[0]
-                    subprocess.run(["wmctrl", "-ia", win_id], check=False, timeout=3)
-                    return 0
-        except (OSError, subprocess.SubprocessError):
-            pass
+    if show_overlay_window():
+        return 0
     print("Overlay não encontrado. Use o tray ou: semaphore ui", file=sys.stderr)
     return 1
 
@@ -178,7 +164,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_watch = sub.add_parser("watch", help="Monitora mudanças de estado")
     p_watch.add_argument("--interval", type=float, default=1.0)
 
-    sub.add_parser("raise", help="Dica para mostrar overlay")
+    sub.add_parser("raise", help="Mostra overlay oculto (só bandeja)")
 
     p_notify = sub.add_parser("notify", help="Envia atualização ao daemon")
     p_notify.add_argument("--source", "-s", required=True)
