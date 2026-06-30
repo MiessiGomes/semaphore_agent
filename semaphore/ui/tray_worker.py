@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import os
-import subprocess
 import sys
 
 
@@ -47,25 +46,9 @@ def _load_indicator_module():
 
 
 def _raise_overlay() -> None:
-    import shutil
+    from semaphore.ui.x11_hints import show_overlay_window
 
-    if not shutil.which("wmctrl"):
-        return
-    try:
-        out = subprocess.run(
-            ["wmctrl", "-l"],
-            capture_output=True,
-            text=True,
-            timeout=3,
-            check=False,
-        )
-        for line in out.stdout.splitlines():
-            if "Semaphore" in line:
-                win_id = line.split()[0]
-                subprocess.run(["wmctrl", "-ia", win_id], check=False, timeout=3)
-                return
-    except (OSError, subprocess.SubprocessError):
-        pass
+    show_overlay_window()
 
 
 def main(parent_pid: int | None = None) -> int:

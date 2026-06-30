@@ -87,6 +87,25 @@ window {
     opacity: 0.7;
     margin-top: 8px;
 }
+
+.hide-overlay-btn {
+    min-width: 18px;
+    min-height: 18px;
+    padding: 0;
+    margin: 2px 4px 0 0;
+    opacity: 0.45;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.hide-overlay-btn:hover {
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.12);
+}
 """
 
 
@@ -174,6 +193,17 @@ class SemaphoreOverlay:
 
     def on_click(self, _gesture, _n_press, _x, _y) -> None:
         self._toggle_details_window()
+
+    def hide(self) -> None:
+        if self._details_window:
+            self._details_window.destroy()
+            self._details_window = None
+        self.window.set_visible(False)
+
+    def show(self) -> None:
+        self.window.set_visible(True)
+        _apply_stay_on_top(self.window, reapply_hints=True)
+        self.window.present()
 
     def _toggle_details_window(self) -> None:
         from gi.repository import Gtk
@@ -543,6 +573,12 @@ def _run_gnome_fallback_overlay(
             def poll_status() -> bool:
                 if stop_event.is_set():
                     return False
+                from semaphore.ui.x11_hints import consume_show_overlay_request
+
+                if consume_show_overlay_request():
+                    window.set_visible(True)
+                    _apply_stay_on_top(window, reapply_hints=True)
+                    window.present()
                 data = get_live_status()
                 if data and overlay_ref[0]:
                     overlay_ref[0].update_from_dict(data)
@@ -679,9 +715,22 @@ def _build_window(
     box.append(yellow)
     box.append(green)
     box.append(badge)
-    window.set_child(box)
+
+    overlay_container = Gtk.Overlay()
+    overlay_container.set_child(box)
+
+    hide_btn = Gtk.Button(label="−")
+    hide_btn.add_css_class("hide-overlay-btn")
+    hide_btn.set_tooltip_text("Ocultar semáforo (fica só na bandeja)")
+    hide_btn.set_halign(Gtk.Align.END)
+    hide_btn.set_valign(Gtk.Align.START)
+    hide_btn.set_can_focus(False)
+    overlay_container.add_overlay(hide_btn)
+
+    window.set_child(overlay_container)
 
     overlay = SemaphoreOverlay(window, red, yellow, green, badge, layout=layout)
+    hide_btn.connect("clicked", lambda *_: overlay.hide())
 
     if enable_drag:
         move_click = Gtk.GestureClick()

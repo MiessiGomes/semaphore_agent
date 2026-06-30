@@ -2,7 +2,7 @@
 
 Semáforo visual pinado na tela para saber quando agentes de IA terminam, precisam de atenção ou estão executando tarefas.
 
-**v0.2.0** — daemon/UI separados, tray (subprocesso GTK3), alertas desktop, layouts, histórico, hooks Cursor v4.
+**v0.2.0** — daemon/UI separados, tray (subprocesso GTK3), ocultar overlay (só bandeja), alertas desktop, layouts, histórico, hooks Cursor v4.
 
 ## Estados das luzes
 
@@ -21,8 +21,21 @@ Semáforo visual pinado na tela para saber quando agentes de IA terminam, precis
 | Mover | Clique esquerdo + arrastar |
 | Detalhes + histórico | Clique direito |
 | Marcar como visto | Duplo clique esquerdo ou `semaphore dismiss` |
-| Mostrar overlay | Tray → "Mostrar semáforo" ou `semaphore raise` |
+| Ocultar (só bandeja) | Ícone `−` no canto superior direito do overlay |
+| Mostrar overlay de novo | Tray → **Mostrar semáforo** ou `semaphore raise` |
 | Atalho global | `./scripts/register-shortcut.sh` (padrão: Super+Shift+S → dismiss) |
+
+### Modo só bandeja
+
+Você pode tirar o semáforo da tela e acompanhar o status **apenas pelo ícone na bandeja do sistema** (emoji 🔴🟡🟢⚫):
+
+1. Clique no **`−`** no overlay — a janela some; o daemon e o tray continuam rodando.
+2. O tray segue atualizando estado e emoji a cada ~800 ms.
+3. Para ver o overlay de novo: tray → **Mostrar semáforo** ou `semaphore raise`.
+
+> Ocultar **não** para o daemon nem desliga notificações/sons. O overlay **não reaparece sozinho** quando um agente muda de estado — só quando você pedir no tray ou via CLI.
+
+**Alternativa permanente** (sem widget na tela desde o início): em `config.toml`, `overlay_enabled = false` e `tray_enabled = true`. O tray continua ativo; use **Mostrar semáforo** se quiser o overlay temporariamente (requer `overlay_enabled = true` + restart da UI).
 
 ## Arquitetura
 
@@ -115,7 +128,17 @@ O script:
 
 - Detecta Python do conda `aiTools` (ou `SEMAPHORE_PYTHON=/caminho/python`)
 - Grava units em `~/.config/systemd/user/`
-- Grava `~/.config/semaphore_agent/systemd.env` (`GDK_BACKEND`, `GI_TYPELIB_PATH`, variáveis da sessão gráfica)
+- Grava `~/.config/semaphore_agent/systemd.env` (`GDK_BACKEND`, `GI_TYPELIB_PATH`, `PATH`)
+- Importa variáveis voláteis da sessão gráfica (`DISPLAY`, `XAUTHORITY`, etc.) para o `systemctl --user` — **não** as fixa no env file (evita quebrar após relogin)
+
+Se o overlay não subir após relogin:
+
+```bash
+systemctl --user import-environment DISPLAY WAYLAND_DISPLAY XAUTHORITY DBUS_SESSION_BUS_ADDRESS XDG_RUNTIME_DIR
+systemctl --user restart semaphore-agent-ui.service
+```
+
+Ou reinstale a partir de um terminal na sessão gráfica: `./scripts/install-systemd.sh split --start`
 
 ### Comandos do dia a dia
 
@@ -172,7 +195,7 @@ semaphore ui                 # overlay + tray (requer daemon)
 semaphore status             # JSON + estado + versão dos hooks
 semaphore watch              # monitora mudanças no terminal
 semaphore dismiss            # marcar como visto (idle)
-semaphore raise              # traz overlay para frente (wmctrl)
+semaphore raise              # mostra overlay oculto (tray / wmctrl)
 semaphore notify -s cli -t running -d "teste"
 semaphore set done           # atalho manual
 semaphore install-hooks      # hooks Cursor em ~/.cursor/
@@ -268,9 +291,13 @@ Som customizado: `~/.config/semaphore_agent/done.wav`.
 ## UI
 
 - Layouts: **vertical**, **horizontal**, **compact** (uma luz)
-- Janela de detalhes com histórico (últimas 10 transições)
+- Botão **`−`** no canto superior direito — oculta o overlay (modo só bandeja)
+- Janela de detalhes com histórico (últimas 10 transições) — clique direito no overlay
 - Badge numérico quando 2+ agentes ativos
-- Tray com emoji (🔴🟡🟢) — subprocesso GTK3; no log: `Tray: ativo (subprocesso GTK3)`
+- **Tray** (subprocesso GTK3; log: `Tray: ativo (subprocesso GTK3)`):
+  - Emoji de estado (🔴🟡🟢⚫)
+  - **Mostrar semáforo** — restaura overlay oculto
+  - **Marcar como visto** — equivalente a `semaphore dismiss`
 
 ## Alertas
 
