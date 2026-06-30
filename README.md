@@ -83,23 +83,40 @@ sudo apt install gir1.2-ayatanaappindicator3-0.1  # tray
 sudo apt install wmctrl libnotify-bin
 ```
 
-### Conda (aiTools)
+### Python
+
+- Python **3.11+**
+- [uv](https://docs.astral.sh/uv/) para instalar o pacote (`uv pip install -e .`)
+
+**Opção A — Conda** (recomendado; `environment.yml` traz PyGObject/GTK4):
 
 ```bash
-conda env create -f environment.yml
-conda activate aiTools
+conda env create -f environment.yml   # cria o env semaphore-agent
+conda activate semaphore-agent
+uv pip install -e .
+```
+
+**Opção B — venv + pacotes do sistema** (após o `apt install` acima):
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
 uv pip install -e .
 ```
 
 ## Instalação
 
 ```bash
-cd ~/Documentos/ev0lux/semaphore_agent
-conda activate aiTools
+git clone https://github.com/MiessiGomes/semaphore_agent.git
+cd semaphore_agent
+
+# Ative o ambiente Python (conda ou venv — ver seção anterior)
+conda activate semaphore-agent   # ou: source .venv/bin/activate
+
 uv pip install -e .
 
 semaphore install-hooks --force   # copia hooks para ~/.cursor/
-semaphore start                  # teste manual (opcional)
+semaphore start                   # teste manual (opcional)
 ```
 
 Atalho global (GNOME):
@@ -113,9 +130,10 @@ Após `install-hooks`, **reinicie o Cursor** (ou abra um chat Agent novo).
 
 ## Systemd (recomendado — inicia no login)
 
-Instala daemon + UI como serviços **user** (sem sudo):
+Instala daemon + UI como serviços **user** (sem sudo). Rode com o ambiente Python ativo (conda ou venv):
 
 ```bash
+conda activate semaphore-agent   # ou: source .venv/bin/activate
 ./scripts/install-systemd.sh split --start
 ```
 
@@ -126,7 +144,7 @@ Instala daemon + UI como serviços **user** (sem sudo):
 
 O script:
 
-- Detecta Python do conda `aiTools` (ou `SEMAPHORE_PYTHON=/caminho/python`)
+- Detecta Python na ordem: `SEMAPHORE_PYTHON` → conda ativo → `.venv` do repo → env `semaphore-agent` → `python3` no PATH
 - Grava units em `~/.config/systemd/user/`
 - Grava `~/.config/semaphore_agent/systemd.env` (`GDK_BACKEND`, `GI_TYPELIB_PATH`, `PATH`)
 - Importa variáveis voláteis da sessão gráfica (`DISPLAY`, `XAUTHORITY`, etc.) para o `systemctl --user` — **não** as fixa no env file (evita quebrar após relogin)
@@ -157,8 +175,8 @@ systemctl --user stop semaphore-agent-daemon.service semaphore-agent-ui.service
 Fluxo completo quando você puxa ou edita o projeto:
 
 ```bash
-cd ~/Documentos/ev0lux/semaphore_agent
-conda activate aiTools
+cd semaphore_agent   # diretório do clone
+conda activate semaphore-agent   # ou: source .venv/bin/activate
 
 uv pip install -e .                    # reinstala pacote (editable)
 semaphore install-hooks --force        # atualiza ~/.cursor/hooks/ (se hooks mudaram)
@@ -175,7 +193,7 @@ semaphore status                       # confere estado + versão dos hooks
 | Hooks (`hooks/`) | `semaphore install-hooks --force` + reiniciar Cursor |
 | Units systemd (`systemd/`) | `./scripts/install-systemd.sh split -y --start` |
 
-Se mudou só Python e já usa `pip install -e .`, basta `systemctl --user restart ...`.
+Se mudou só Python e já usa `uv pip install -e .`, basta `systemctl --user restart ...`.
 
 ## Rodar manualmente (sem systemd)
 
@@ -321,6 +339,7 @@ Prioridade na agregação: `attention` > `running` > `waiting` > `done` > `idle`
 ## Desenvolvimento
 
 ```bash
+conda activate semaphore-agent   # ou: source .venv/bin/activate
 uv pip install -e ".[dev]"
 pytest tests/ -q
 ruff check semaphore tests
