@@ -29,15 +29,27 @@ detect_python() {
     echo "$SEMAPHORE_PYTHON"
     return
   fi
-  if [[ -x "$HOME/anaconda3/envs/aiTools/bin/python" ]]; then
-    echo "$HOME/anaconda3/envs/aiTools/bin/python"
-    return
+  if [[ -n "${CONDA_PREFIX:-}" ]] && [[ -x "$CONDA_PREFIX/bin/python" ]]; then
+    if "$CONDA_PREFIX/bin/python" -c "import gi; import semaphore" 2>/dev/null; then
+      echo "$CONDA_PREFIX/bin/python"
+      return
+    fi
   fi
+  for candidate in \
+    "$REPO_ROOT/.venv/bin/python" \
+    "$HOME/anaconda3/envs/semaphore-agent/bin/python" \
+    "$HOME/miniconda3/envs/semaphore-agent/bin/python" \
+    "$HOME/mambaforge/envs/semaphore-agent/bin/python"; do
+    if [[ -x "$candidate" ]] && "$candidate" -c "import gi; import semaphore" 2>/dev/null; then
+      echo "$candidate"
+      return
+    fi
+  done
   if command -v python3 >/dev/null 2>&1; then
     python3 -c "import gi; import semaphore" 2>/dev/null && command -v python3 && return
   fi
   echo "Não encontrei Python com semaphore + gi instalados." >&2
-  echo "Use: SEMAPHORE_PYTHON=/caminho/python $0" >&2
+  echo "Ative o env (conda/venv) ou use: SEMAPHORE_PYTHON=/caminho/python $0" >&2
   exit 1
 }
 
