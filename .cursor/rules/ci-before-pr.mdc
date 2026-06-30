@@ -1,0 +1,35 @@
+---
+description: Rodar CI localmente antes de commit/PR e corrigir falhas
+alwaysApply: true
+---
+
+# CI antes de commit e PR
+
+O workflow em `.github/workflows/ci.yml` roda em todo push/PR. **Sempre** execute e corrija antes de abrir ou atualizar um PR.
+
+## Comandos (espelham o CI)
+
+```bash
+conda activate aiTools   # ou o env ativo do projeto
+uv pip install -e ".[dev]"   # ou: uv pip install -e . pytest ruff
+ruff check semaphore tests
+pytest tests/ -q
+```
+
+Se `ruff` reportar erro fixável:
+
+```bash
+ruff check --fix semaphore tests
+```
+
+## Obrigatório ao finalizar mudanças
+
+1. Rodar `ruff check` e `pytest` — não entregar PR com CI vermelho.
+2. Corrigir imports (`I001`), lint e testes quebrados no mesmo commit/PR.
+3. Se adicionar código novo, incluir ou atualizar testes em `tests/` quando fizer sentido.
+
+## Padrões comuns neste repo
+
+- Imports `semaphore.*` em ordem alfabética (isort via ruff).
+- Python 3.11+, line-length 100 (`pyproject.toml`).
+- Instalar deps com `uv pip install`, nunca `pip install` direto.

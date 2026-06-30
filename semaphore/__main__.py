@@ -10,8 +10,8 @@ import time
 from semaphore import __version__
 from semaphore.config import CONFIG_FILE, Config, socket_path
 from semaphore.daemon import ensure_daemon, get_live_status, notify
-from semaphore.ipc import dismiss
 from semaphore.hooks_version import HOOKS_VERSION, hooks_outdated, installed_version
+from semaphore.ipc import dismiss
 from semaphore.state import STATE_NAMES
 
 
