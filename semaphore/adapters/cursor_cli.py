@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import re
+import tempfile
 import time
 from pathlib import Path
 
@@ -19,7 +20,7 @@ SKIP = re.compile(r"semaphore|grep|pgrep", re.I)
 
 
 class CursorCliAdapter(BaseAdapter):
-    """Track CLI agent via file activity — not process list (stale agents stay open)."""
+    """Track CLI agent via high-confidence file activity (logs, transcripts)."""
 
     name = "cursor-cli-adapter"
 
@@ -29,16 +30,19 @@ class CursorCliAdapter(BaseAdapter):
         interval: float = 1.0,
         active_window: float = 12.0,
         finalize_grace: float = 4.0,
+        done_cooldown: float = 45.0,
         stop_event=None,
     ) -> None:
         super().__init__(hub, stop_event)  # type: ignore[arg-type]
         self.interval = interval
         self.active_window = active_window
         self.finalize_grace = finalize_grace
+        self.done_cooldown = done_cooldown
         self._session_active = False
         self._done_sent = False
+        self._done_at = 0.0
         self._last_activity = 0.0
-        self._last_seen_mtime = 0.0
+        self._last_seen_cli_mtime = 0.0
 
     def _read_cmdline(self, pid: str) -> str:
         try:
@@ -59,45 +63,55 @@ class CursorCliAdapter(BaseAdapter):
                 return True
         return False
 
-    def _activity_mtime(self) -> float:
-        latest = 0.0
+    def _activity_mtimes(self) -> tuple[float, float]:
+        """Return (cli_mtime, shared_mtime). Only cli_mtime drives session state."""
+        cli_latest = 0.0
+        shared_latest = 0.0
 
-        def bump(path: Path) -> None:
-            nonlocal latest
+        def bump_cli(path: Path) -> None:
+            nonlocal cli_latest
             try:
-                latest = max(latest, path.stat().st_mtime)
+                cli_latest = max(cli_latest, path.stat().st_mtime)
             except OSError:
                 pass
 
-        if CURSOR_CHATS.exists():
-            for name in ("store.db", "meta.json"):
-                for path in CURSOR_CHATS.rglob(name):
-                    bump(path)
+        def bump_shared(path: Path) -> None:
+            nonlocal shared_latest
+            try:
+                shared_latest = max(shared_latest, path.stat().st_mtime)
+            except OSError:
+                pass
 
         if CURSOR_PROJECTS.exists():
             for path in CURSOR_PROJECTS.glob("*/agent-transcripts/*/*.jsonl"):
-                bump(path)
-
-        import tempfile
+                bump_cli(path)
 
         log_root = Path(tempfile.gettempdir())
         for path in log_root.glob("cursor-agent-logs-*/*"):
             if path.is_file():
-                bump(path)
+                bump_cli(path)
 
-        return latest
+        if CURSOR_CHATS.exists():
+            for name in ("store.db", "meta.json"):
+                for path in CURSOR_CHATS.rglob(name):
+                    bump_shared(path)
 
-    def _note_activity(self, mtime: float, now: float) -> None:
-        if mtime > self._last_seen_mtime + 0.01:
-            self._last_seen_mtime = mtime
-            self._last_activity = now
-            self._session_active = True
-            self._done_sent = False
+        return cli_latest, shared_latest
+
+    def _note_cli_activity(self, cli_mtime: float, now: float) -> None:
+        if cli_mtime <= self._last_seen_cli_mtime + 0.01:
+            return
+        self._last_seen_cli_mtime = cli_mtime
+        if self._done_sent and now < self._done_at + self.done_cooldown:
+            return
+        self._last_activity = now
+        self._session_active = True
+        self._done_sent = False
 
     def _poll(self) -> None:
         now = time.time()
-        mtime = self._activity_mtime()
-        self._note_activity(mtime, now)
+        cli_mtime, _shared_mtime = self._activity_mtimes()
+        self._note_cli_activity(cli_mtime, now)
 
         if self._has_askpass():
             self._session_active = True
@@ -145,6 +159,7 @@ class CursorCliAdapter(BaseAdapter):
             heuristic=False,
         )
         self._done_sent = True
+        self._done_at = now
         self._session_active = False
 
     def run(self) -> None:

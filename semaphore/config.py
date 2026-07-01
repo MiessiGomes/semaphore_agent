@@ -37,15 +37,18 @@ class Config:
     overlay_enabled: bool = True
 
     # Timing
-    done_timeout: float = 45.0
-    cursor_done_timeout: float = 45.0
-    claude_done_timeout: float = 60.0
+    done_timeout: float = 15.0
+    cursor_done_timeout: float = 15.0
+    claude_done_timeout: float = 15.0
     source_ttl: float = 300.0
     heuristic_ttl: float = 15.0
     claude_poll_interval: float = 1.5
     process_scan_interval: float = 3.0
     codex_idle_seconds: float = 30.0
     stay_on_top_ms: int = 500
+    cursor_cli_active_window: float = 12.0
+    cursor_cli_finalize_grace: float = 4.0
+    cursor_cli_done_cooldown: float = 45.0
 
     # Alerts
     desktop_notifications: bool = True
@@ -86,15 +89,18 @@ class Config:
             layout=ui.get("layout", "vertical"),
             tray_enabled=bool(ui.get("tray_enabled", True)),
             overlay_enabled=bool(ui.get("overlay_enabled", True)),
-            done_timeout=float(timing.get("done_timeout", 45.0)),
-            cursor_done_timeout=float(timing.get("cursor_done_timeout", 45.0)),
-            claude_done_timeout=float(timing.get("claude_done_timeout", 60.0)),
+            done_timeout=float(timing.get("done_timeout", 15.0)),
+            cursor_done_timeout=float(timing.get("cursor_done_timeout", 15.0)),
+            claude_done_timeout=float(timing.get("claude_done_timeout", 15.0)),
             source_ttl=float(timing.get("source_ttl", 300.0)),
             heuristic_ttl=float(timing.get("heuristic_ttl", 15.0)),
             claude_poll_interval=float(timing.get("claude_poll_interval", 1.5)),
             process_scan_interval=float(timing.get("process_scan_interval", 3.0)),
             codex_idle_seconds=float(timing.get("codex_idle_seconds", 30.0)),
             stay_on_top_ms=int(timing.get("stay_on_top_ms", 500)),
+            cursor_cli_active_window=float(timing.get("cursor_cli_active_window", 12.0)),
+            cursor_cli_finalize_grace=float(timing.get("cursor_cli_finalize_grace", 4.0)),
+            cursor_cli_done_cooldown=float(timing.get("cursor_cli_done_cooldown", 45.0)),
             desktop_notifications=bool(alerts.get("desktop_notifications", True)),
             notify_on_done=bool(alerts.get("notify_on_done", True)),
             notify_on_attention=bool(alerts.get("notify_on_attention", True)),
@@ -135,6 +141,9 @@ class Config:
                 f"process_scan_interval = {self.process_scan_interval}",
                 f"codex_idle_seconds = {self.codex_idle_seconds}",
                 f"stay_on_top_ms = {self.stay_on_top_ms}",
+                f"cursor_cli_active_window = {self.cursor_cli_active_window}",
+                f"cursor_cli_finalize_grace = {self.cursor_cli_finalize_grace}",
+                f"cursor_cli_done_cooldown = {self.cursor_cli_done_cooldown}",
                 "",
                 "[alerts]",
                 f"desktop_notifications = {str(self.desktop_notifications).lower()}",
