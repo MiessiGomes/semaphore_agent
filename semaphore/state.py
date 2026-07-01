@@ -134,11 +134,11 @@ class AggregatedStatus:
 class StateHub:
     def __init__(
         self,
-        done_timeout: float = 45.0,
+        done_timeout: float = 15.0,
         source_ttl: float = 300.0,
         heuristic_ttl: float = 15.0,
-        cursor_done_timeout: float = 45.0,
-        claude_done_timeout: float = 60.0,
+        cursor_done_timeout: float = 15.0,
+        claude_done_timeout: float = 15.0,
     ) -> None:
         self.done_timeout = done_timeout
         self.source_ttl = source_ttl
@@ -170,7 +170,7 @@ class StateHub:
     def _done_timeout_for(self, source: str) -> float:
         if source.startswith("proc:"):
             return self.heuristic_ttl
-        if source == "cursor":
+        if source in ("cursor", "cursor-cli"):
             return self.cursor_done_timeout
         if source == "claude":
             return self.claude_done_timeout

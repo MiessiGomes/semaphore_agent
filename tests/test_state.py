@@ -39,6 +39,11 @@ def test_history_recorded() -> None:
     assert len(hub.history) >= 2
 
 
+def test_cursor_cli_uses_cursor_done_timeout() -> None:
+    hub = StateHub(cursor_done_timeout=90.0)
+    assert hub._done_timeout_for("cursor-cli") == 90.0
+
+
 def test_aggregated_from_dict() -> None:
     hub = StateHub()
     hub.update("cursor", AgentState.DONE, detail="ok")

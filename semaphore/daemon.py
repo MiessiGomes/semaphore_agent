@@ -47,8 +47,9 @@ class SemaphoreDaemon:
                 CursorCliAdapter(
                     self.hub,
                     interval=1.0,
-                    active_window=float(getattr(self.config, "cursor_cli_active_window", 12.0)),
-                    finalize_grace=float(getattr(self.config, "cursor_cli_finalize_grace", 4.0)),
+                    active_window=self.config.cursor_cli_active_window,
+                    finalize_grace=self.config.cursor_cli_finalize_grace,
+                    done_cooldown=self.config.cursor_cli_done_cooldown,
                     stop_event=self._stop_event,
                 )
             )

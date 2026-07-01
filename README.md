@@ -12,7 +12,7 @@ Semáforo visual pinado na tela para saber quando agentes de IA terminam, precis
 | Vermelho fixo | Executando ativamente |
 | Vermelho piscando | Ação bloqueante urgente (comando sensível, permissão negada) |
 | Amarelo fixo | Aguardando — build/teste **ou** sua aprovação no Cursor |
-| Verde fixo | Tarefa concluída (~45s, depois volta ao cinza) |
+| Verde fixo | Tarefa concluída (~15s, depois volta ao cinza) |
 
 ## Controles do semáforo
 
@@ -254,9 +254,10 @@ Heurísticos (`proc:*`) não sobrescrevem fontes confirmadas como Cursor.
 ### Cursor CLI (`agent` no terminal)
 
 Os hooks do IDE **não cobrem** o comando `agent` no terminal integrado do VS Code/Cursor.  
-O adapter **`cursor-cli`** detecta atividade por arquivos (não por processo — agents em background ficam abertos):
+O adapter **`cursor-cli`** detecta atividade por arquivos de **alta confiança** (não por processo — agents em background ficam abertos):
 
-- alterações em `~/.cursor/chats/` ou `agent-transcripts/` → **vermelho**
+- alterações em `agent-transcripts/` ou `/tmp/cursor-agent-logs-*` → **vermelho**
+- `store.db` / `meta.json` do IDE **não** mantêm o semáforo vermelho sozinhos (evita ruído de fundo)
 - pausa entre etapas (>12s sem escrita) → **amarelo** breve
 - fim da sessão → **verde** + notificação
 - `cursor-askpass` → **vermelho piscando**
@@ -283,11 +284,14 @@ overlay_enabled = true
 # window_x / window_y — posição salva ao arrastar
 
 [timing]
-done_timeout = 45.0
-cursor_done_timeout = 45.0
-claude_done_timeout = 60.0
+done_timeout = 15.0
+cursor_done_timeout = 15.0
+claude_done_timeout = 15.0
 heuristic_ttl = 15.0
 stay_on_top_ms = 500
+cursor_cli_active_window = 12.0
+cursor_cli_finalize_grace = 4.0
+cursor_cli_done_cooldown = 45.0
 
 [alerts]
 desktop_notifications = true
