@@ -48,7 +48,7 @@ class ClaudeAdapter(BaseAdapter):
                 return AgentState.ATTENTION, waiting_for or "input necessário"
             return AgentState.WAITING, waiting_for or "aguardando"
 
-        if state_raw == "working" or status == "working":
+        if "working" in (state_raw, status) or "busy" in (state_raw, status):
             return AgentState.RUNNING, session.get("name") or session.get("cwd", "")
 
         if state_raw:
