@@ -40,10 +40,27 @@ def test_done_wins_over_idle_session() -> None:
     assert hub.aggregate().state == AgentState.DONE
 
 
-def test_poll_clears_when_all_sessions_idle() -> None:
+def test_idle_session_without_prior_work_clears_claude() -> None:
     hub = StateHub()
     adapter = ClaudeAdapter(hub, interval=999)
-    hub.update("claude", AgentState.WAITING, detail="aguardando")
     adapter._apply_sessions([{"status": "idle", "cwd": "/tmp"}])
     assert "claude" not in hub.aggregate().sources
     assert hub.aggregate().state == AgentState.IDLE
+
+
+def test_idle_after_work_emits_done() -> None:
+    hub = StateHub()
+    adapter = ClaudeAdapter(hub, interval=999)
+    adapter._apply_sessions([{"status": "working", "name": "job"}])
+    assert hub.aggregate().state == AgentState.RUNNING
+    adapter._apply_sessions([{"status": "idle", "name": "job"}])
+    assert hub.aggregate().state == AgentState.DONE
+
+
+def test_idle_after_waiting_emits_done() -> None:
+    hub = StateHub()
+    adapter = ClaudeAdapter(hub, interval=999)
+    adapter._apply_sessions([{"status": "waiting", "waitingFor": "tool"}])
+    assert hub.aggregate().state == AgentState.WAITING
+    adapter._apply_sessions([{"status": "idle"}])
+    assert hub.aggregate().state == AgentState.DONE

@@ -9,6 +9,10 @@ import subprocess
 from semaphore.adapters import BaseAdapter
 from semaphore.state import AgentState
 
+_ACTIVE_STATES = frozenset(
+    {AgentState.RUNNING, AgentState.WAITING, AgentState.ATTENTION},
+)
+
 
 class ClaudeAdapter(BaseAdapter):
     name = "claude-adapter"
@@ -17,6 +21,14 @@ class ClaudeAdapter(BaseAdapter):
         super().__init__(hub, stop_event)  # type: ignore[arg-type]
         self.interval = interval
         self._claude = shutil.which("claude")
+        self._was_engaged = False
+
+    def _finish_or_clear(self) -> None:
+        if self._was_engaged:
+            self._was_engaged = False
+            self.hub.update("claude", AgentState.DONE, detail="sessão concluída")
+        else:
+            self.hub.clear_source("claude")
 
     def _map_session(self, session: dict) -> tuple[AgentState, str]:
         state_raw = str(session.get("state", "")).lower()
@@ -55,8 +67,12 @@ class ClaudeAdapter(BaseAdapter):
                 best_detail = detail
 
         if best_state == AgentState.IDLE:
-            self.hub.clear_source("claude")
+            self._finish_or_clear()
         else:
+            if best_state in _ACTIVE_STATES:
+                self._was_engaged = True
+            elif best_state == AgentState.DONE:
+                self._was_engaged = False
             self.hub.update("claude", best_state, detail=best_detail)
 
     def _poll(self) -> None:
@@ -72,7 +88,7 @@ class ClaudeAdapter(BaseAdapter):
         except (subprocess.SubprocessError, OSError):
             return
         if result.returncode != 0 or not result.stdout.strip():
-            self.hub.clear_source("claude")
+            self._finish_or_clear()
             return
 
         try:
@@ -81,7 +97,7 @@ class ClaudeAdapter(BaseAdapter):
             return
 
         if not isinstance(sessions, list) or not sessions:
-            self.hub.clear_source("claude")
+            self._finish_or_clear()
             return
 
         self._apply_sessions(sessions)

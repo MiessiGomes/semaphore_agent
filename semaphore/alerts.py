@@ -21,8 +21,9 @@ class AlertManager:
         prev = self._last_state
         self._last_state = status.state
 
-        if status.state == AgentState.DONE and self.config.notify_on_done:
-            self._notify("Tarefa concluída", self._summary(status))
+        if status.state == AgentState.DONE:
+            if self.config.notify_on_done:
+                self._notify("Tarefa concluída", self._summary(status))
             if self.config.sound_on_done:
                 self._play_sound()
         elif status.state == AgentState.ATTENTION and self.config.notify_on_attention:
