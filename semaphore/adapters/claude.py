@@ -23,10 +23,13 @@ class ClaudeAdapter(BaseAdapter):
         status = str(session.get("status", "")).lower()
         waiting_for = str(session.get("waitingFor", "")).lower()
 
-        if state_raw == "done":
+        if state_raw == "done" or status == "done":
             return AgentState.DONE, "sessão concluída"
         if state_raw in ("failed", "stopped"):
             return AgentState.IDLE, state_raw
+
+        if status == "idle" or state_raw == "idle":
+            return AgentState.IDLE, ""
 
         if status == "waiting" or state_raw in ("blocked", "needs-input"):
             if "permission" in waiting_for or "input" in waiting_for:
@@ -38,7 +41,23 @@ class ClaudeAdapter(BaseAdapter):
 
         if state_raw:
             return AgentState.RUNNING, state_raw
-        return AgentState.WAITING, "idle"
+        return AgentState.IDLE, ""
+
+    def _apply_sessions(self, sessions: list) -> None:
+        best_state = AgentState.IDLE
+        best_detail = ""
+        for session in sessions:
+            if not isinstance(session, dict):
+                continue
+            state, detail = self._map_session(session)
+            if state.value > best_state.value:
+                best_state = state
+                best_detail = detail
+
+        if best_state == AgentState.IDLE:
+            self.hub.clear_source("claude")
+        else:
+            self.hub.update("claude", best_state, detail=best_detail)
 
     def _poll(self) -> None:
         if not self._claude:
@@ -65,20 +84,7 @@ class ClaudeAdapter(BaseAdapter):
             self.hub.clear_source("claude")
             return
 
-        best_state = AgentState.IDLE
-        best_detail = ""
-        for session in sessions:
-            if not isinstance(session, dict):
-                continue
-            state, detail = self._map_session(session)
-            if state.value > best_state.value:
-                best_state = state
-                best_detail = detail
-
-        if best_state == AgentState.IDLE:
-            self.hub.clear_source("claude")
-        else:
-            self.hub.update("claude", best_state, detail=best_detail)
+        self._apply_sessions(sessions)
 
     def run(self) -> None:
         while not self.stop_event.wait(self.interval):
