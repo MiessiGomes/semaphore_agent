@@ -64,3 +64,17 @@ def test_idle_after_waiting_emits_done() -> None:
     assert hub.aggregate().state == AgentState.WAITING
     adapter._apply_sessions([{"status": "idle"}])
     assert hub.aggregate().state == AgentState.DONE
+
+
+def test_busy_status_is_running() -> None:
+    adapter = _adapter()
+    state, detail = adapter._map_session({"status": "busy", "name": "with-subagents"})
+    assert state == AgentState.RUNNING
+    assert detail == "with-subagents"
+
+
+def test_busy_session_wins_over_idle_session() -> None:
+    hub = StateHub()
+    adapter = ClaudeAdapter(hub, interval=999)
+    adapter._apply_sessions([{"status": "idle"}, {"status": "busy", "name": "main"}])
+    assert hub.aggregate().state == AgentState.RUNNING
